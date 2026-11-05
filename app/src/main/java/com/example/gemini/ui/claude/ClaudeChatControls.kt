@@ -56,6 +56,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gemini.data.agent.claude.ClaudeAccountManager
 import com.example.gemini.data.agent.claude.ClaudeChatBackend
+import com.example.gemini.data.agent.claude.contextLabel
+import com.example.gemini.data.agent.claude.thinkingLabel
 import com.example.gemini.data.agent.claude.ClaudePreferences
 import com.example.gemini.theme.QuotaAmber
 import com.example.gemini.theme.QuotaGreen
@@ -328,7 +330,7 @@ fun ClaudeModelSheet(
             }
 
             @Composable
-            fun ModelRow(value: String, name: String, desc: String) {
+            fun ModelRow(value: String, name: String, desc: String, warnDesc: Boolean = false) {
                 val isSel = value == selected
                 Surface(
                     onClick = {
@@ -344,7 +346,10 @@ fun ClaudeModelSheet(
                         Column(Modifier.weight(1f)) {
                             Text(name, fontWeight = if (isSel) FontWeight.Bold else FontWeight.SemiBold, fontSize = 14.sp)
                             if (desc.isNotBlank()) {
-                                Text(desc, fontSize = 12.sp, lineHeight = 16.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                                Text(
+                                    desc, fontSize = 12.sp, lineHeight = 16.sp,
+                                    color = if (warnDesc) com.example.gemini.theme.QuotaAmber else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
                             }
                         }
                         if (isSel) {
@@ -400,7 +405,13 @@ fun ClaudeModelSheet(
                 SheetSectionLabel(p.name, trailing = "custom provider")
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     p.models.forEach { m ->
-                        ModelRow("@${p.id}/${m.id}", m.name?.takeIf { it.isNotBlank() } ?: m.id, if (m.name.isNullOrBlank()) "" else m.id)
+                        val ctxLabel = m.contextLabel(p)
+                        ModelRow(
+                            "@${p.id}/${m.id}",
+                            m.name?.takeIf { it.isNotBlank() } ?: m.id,
+                            listOfNotNull(m.id.takeIf { !m.name.isNullOrBlank() }, ctxLabel ?: "context unknown", m.thinkingLabel(p)).joinToString(" · "),
+                            warnDesc = ctxLabel == null
+                        )
                     }
                 }
             }
